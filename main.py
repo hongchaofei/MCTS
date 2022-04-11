@@ -1,4 +1,5 @@
 from mcts import Node, MCTS
+from maze import Maze
 import numpy as np
 # import hashlib
 
@@ -51,7 +52,7 @@ if __name__=="__main__":
 
     for ep in range(episode_num):
         agent.simulate_times += 1
-        state = State(value=np.random.randint(10)-5, turn=2 + np.random.randint(10))
+        state = State(value=np.random.randint(10)-5, turn=2 + np.random.randint(14))
 
         start_node = agent.start_node(state)
         score, path = agent.search([('start', start_node)])
@@ -65,9 +66,9 @@ if __name__=="__main__":
         # simulate and expand
         while not state.terminal():
             action, node = path[-1]
-            selected_action, new_node = agent.expand(node)
+            selected_action = agent.select_action(node)
             state = state.next_state(selected_action)
-            new_node.state = state
+            new_node = agent.expand(node, selected_action, state)
             path.append((selected_action, new_node))
 
         reward = state.reward()

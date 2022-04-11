@@ -1,0 +1,136 @@
+# -*- coding: utf-8 -*-
+"""
+Created on 2022/4/11
+@project: MCTS
+@filename: maze
+@author: Hong Chaofei
+@contact: hongchf@gmail.com
+
+@description: 
+"""
+
+
+import numpy as np
+from mcts import Node, MCTS
+from random import choice
+
+class Maze():
+
+    MapSize = 6
+    Map = np.zeros((MapSize, MapSize))
+    Map[1, 0:2] = 1
+    Map[1:5, 4] = 1
+    Map[3, 2:3] = 1
+    MOVES = ['W', 'E', 'N', 'S']
+    num_moves = len(MOVES)
+    MAX_TURNS = 1000
+
+
+    def __init__(self, start, goal):
+        super(Maze, self).__init__()
+        assert start[0] < Maze.MapSize and start[1] < Maze.MapSize
+        assert Maze.Map[start[0], start[1]] == 0
+        assert goal[0] < Maze.MapSize and goal[1] < Maze.MapSize
+        assert Maze.Map[goal[0], goal[1]] == 0
+        self.turn = 0
+        self.start = start
+        self.goal = goal
+        self.position = start
+        self.reward = 0
+
+    def next_state(self, action):
+        tmp_posi = [self.position[0], self.position[1]]
+        if action == 'W':
+            tmp_posi[1] -= 1
+        elif action == 'E':
+            tmp_posi[1] += 1
+        elif action == 'N':
+            tmp_posi[0] -= 1
+        elif action == 'S':
+            tmp_posi[0] += 1
+        if np.min(tmp_posi) < 0 or np.max(tmp_posi) >= Maze.MapSize:
+            self.reward -= 2
+        elif Maze.Map[tmp_posi[0], tmp_posi[1]] == 1:
+            self.reward -= 2
+        else:
+            self.position = tmp_posi
+            if self.position[0] == self.goal[0] and self.position[1] == self.goal[1]:
+                self.reward += 10
+            else:
+                self.reward -= 1
+        self.turn += 1
+        return self.position
+
+    def terminal(self):
+        if self.turn >= Maze.MAX_TURNS:
+            return True
+        elif self.position[0] == self.goal[0] and self.position[1] == self.goal[1]:
+            return True
+        else:
+            return False
+
+
+    def __repr__(self):
+        s = "Posi: %d,%d; Moves: %s" % (self.position[0],self.position[1], self.turn)
+        return s
+
+    @staticmethod
+    def get_vaild_positions():
+        positions = []
+        for ii in range(Maze.MapSize):
+            for jj in range(Maze.MapSize):
+                if Maze.Map[ii, jj] == 0:
+                    positions.append((ii,jj))
+
+        return positions
+
+
+
+
+
+if __name__=="__main__":
+    episode_num = 10000
+    agent = MCTS()
+    agent.num_action = Maze.num_moves
+    agent.set_actions(Maze.MOVES)
+
+    for ep in range(episode_num):
+        agent.simulate_times += 1
+        positions = Maze.get_vaild_positions()
+        start = choice(positions)
+        positions.pop(positions.index(start))
+        goal = choice(positions)
+
+        state = Maze(start=start, goal=goal)
+
+        start_node = agent.start_node(state.position)
+        score, path = agent.search([('start', start_node)])
+
+        #search according to mcts path
+        for action, node in path:
+            if action is not 'start':
+                position = state.next_state(action)
+                assert position == node.state
+
+        # simulate and expand
+        while not state.terminal():
+            action, node = path[-1]
+            selected_action = agent.select_action(node)
+            position = state.next_state(selected_action)
+            new_node = agent.expand(node, selected_action, position)
+            path.append((selected_action, new_node))
+
+        reward = state.reward
+        agent.backup(path, reward)
+        print("episode: %d, c_explore:%f, reward: %f, value:%d, node_len:%d"%(ep, agent.c_explore, reward, state.turn, len(agent.nodes)))
+        # actions = []
+        # for action, node in path:
+        #     if action == 'start':
+        #         actions.append("start posi:%d,%d"%(node.state[0], node.state[1]))
+        #     else:
+        #         actions.append(action)
+        # actions.append("start posi:%d,%d"%(node.state[0], node.state[1]))
+        # print(actions)
+        agent.c_explore *= 0.999
+
+
