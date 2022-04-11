@@ -42,6 +42,12 @@ class Node():
         else:
             return False
 
+    def __eq__(self, other):
+        if self.state[0] == other.state[0] and self.state[1] == other.state[1]:
+            return True
+        else:
+            return False
+
     def __repr__(self):
         s = "Node[ state:%d; visits:%d; reward:%f]" % (self.state.value, self.visits, self.ave_reward)
         return s
@@ -87,8 +93,9 @@ class MCTS():
                         best_path = tmp_path
 
             if best_path is None:
-                best_score = node.ucb_score(self.c_explore, self.simulate_times)
+                best_score = node.ucb_score(self.c_explore, self.simulate_times) - 10
                 best_path = search_path
+
         else:
             best_score = node.ucb_score(self.c_explore, self.simulate_times)
             best_path = search_path
@@ -101,13 +108,7 @@ class MCTS():
             new_actions = self.actions.difference(expanded_actions)
             selected_action = choice(tuple(new_actions))
         else:
-            best_score = -10000000000000000000000000000
-            selected_action = None
-            for action, child_node in node.children.items():
-                score = node.ucb_score(self.c_explore, self.simulate_times)
-                if score > best_score:
-                    best_score = score
-                    selected_action = action
+            selected_action = choice(tuple(self.actions))
         return selected_action
 
 
